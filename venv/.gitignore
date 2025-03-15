@@ -1,0 +1,38 @@
+# Virtual environment  
+venv/  
+*.pyc  
+__pycache__/  
+
+# Ignore environment variables  
+.env  
+
+# Ignore database files (for SQLite, if used)  
+db.sqlite3  
+*.db  
+
+# Ignore static and media files  
+/static/  
+/media/  
+
+# Ignore compiled and cache files  
+*.log  
+*.pot  
+*.pyc  
+*.pyo  
+*.swp  
+.DS_Store  
+*.sublime-workspace  
+.idea/  
+.vscode/  
+
+# Ignore Django migrations cache (keep actual migrations, ignore cache files)  
+**/migrations/*.pyc  
+**/migrations/*.pyo  
+**/migrations/__pycache__/  
+
+# Ignore all `.env` files, even if they have different names  
+.env*  
+
+# Ignore PostgreSQL dump files  
+*.sql  
+*.dump  

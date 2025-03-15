@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Chat</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+        .chat-container {
+            display: none;
+            width: 90%;
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+        .chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 10px;
+        }
+        .room-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .messages {
+            max-height: 400px;
+            overflow-y: auto;
+            padding: 10px;
+            background: #e5ddd5;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+        .message {
+            padding: 10px;
+            margin: 5px;
+            border-radius: 10px;
+            max-width: 60%;
+            word-wrap: break-word;
+        }
+
+        /* Sent Messages (User) */
+        .message.sent {
+            background-color: #b4fb7f; /* Light green */
+            align-self: flex-end;
+            text-align: right;
+        }
+
+        /* Received Messages (Other User) */
+        .message.received {
+            background-color: #ffffff; /* White */
+            align-self: flex-start;
+            text-align: left;
+            border: 1px solid #ccc;
+        }
+        .chat-input {
+            display: flex;
+            padding: 10px;
+            background: white;
+            border-top: 1px solid #ddd;
+            border-radius: 10px;
+        }
+        .chat-input textarea {
+            flex: 1;
+            resize: none;
+            height: 40px;
+            border-radius: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+        }
+        .chat-input button {
+            margin-left: 10px;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+        }
+        #connection-status {
+            text-align: center;
+            margin-bottom: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div id="selectionScreen" class="text-center">
+        <h2 class="mb-4">Welcome to chatroom</h2>
+        <button class="btn btn-secondary btn-lg" onclick="showOptions('private')">Click to start</button>
+    </div>
+    
+    <div id="roomOptions" class="text-center" style="display: none;">
+        <h3 class="mb-4">Select Only One</h3>
+        <button class="btn btn-success btn-lg me-2" onclick="showRoomForm('create')">Create Room</button>
+        <button class="btn btn-info btn-lg" onclick="showRoomForm('join')">Join Room</button>
+    </div>
+    
+    <div id="roomForm" class="text-center" style="display: none;">
+        <h3 id="formTitle" class="mb-3"></h3>
+        <div class="mb-2">
+            <input type="text" id="userName" placeholder="Enter your username">
+        </div>
+        <div class="mb-2">
+            <input type="text" id="roomName" class="form-control" placeholder="Room Name">
+        </div>
+        <div class="mb-3">
+            <input type="password" id="roomPassword" class="form-control" placeholder="Password">
+        </div>
+        <button class="btn btn-primary btn-lg" onclick="enterChat()">Submit</button>
+    </div>
+    
+    <div id="chatContainer" class="chat-container">
+        <div class="chat-header">
+            <span id="chatRoomName" class="room-name"></span>
+            <button id="logoutBtn" class="btn btn-danger btn-sm" onclick="logout()">Logout</button>
+        </div>
+        <p id="connection-status" class="text-muted"></p>
+        <div class="messages" id="messageList"></div>
+    
+        <!-- ✅ Updated Chat Input Section with File Upload Button -->
+        <div class="chat-input mt-3">
+            <textarea id="message-box" class="form-control me-2" placeholder="Type your message..."></textarea>
+            <input type="file" id="fileInput" class="d-none" accept="image/*, audio/*, video/*">
+            <button class="btn btn-secondary" onclick="document.getElementById('fileInput').click()">📎</button>
+            <button class="btn btn-primary" onclick="sendMessage()">➤</button>
+        </div>
+    </div>
+    
+
+    <script>
+        let chatSocket = null;
+        let roomName = "";
+        let userId = Math.random().toString(36).substring(2, 10); // Unique User ID
+        console.log("Your User ID:", userId); // ✅ Debug: Show generated user ID
+
+    
+        function showOptions(type) {
+            document.getElementById("selectionScreen").style.display = "none";
+            document.getElementById("roomOptions").style.display = "block";
+        }
+    
+        function showRoomForm(action) {
+            document.getElementById("roomOptions").style.display = "none";
+            document.getElementById("roomForm").style.display = "block";
+            document.getElementById("formTitle").innerText = action === 'create' ? "Create Room" : "Join Room";
+        }
+    
+        function enterChat() {
+            let userNameInput = document.getElementById("userName").value.trim(); // Get username
+            roomName = document.getElementById("roomName").value.trim();
+            let roomPassword = document.getElementById("roomPassword").value.trim();
+    
+            if (roomName === "" || roomPassword === "") {
+                alert("Please enter both Username, Room Name, and Password!");
+                return;
+            }
+    
+            document.getElementById("roomForm").style.display = "none";
+            document.getElementById("chatContainer").style.display = "block";
+            document.getElementById("chatRoomName").innerText = "Room: " + roomName;
+
+            window.userName = userNameInput;  // Store username globally
+    
+            chatSocket = new WebSocket("ws://" + window.location.host + "/ws/chat/" + roomName + "/");
+    
+            chatSocket.onopen = function () {
+                document.getElementById("connection-status").innerText = "Connected to WebSocket!";
+                document.getElementById("connection-status").style.color = "green";
+            };
+    
+            chatSocket.onerror = function () {
+                document.getElementById("connection-status").innerText = "Error connecting to WebSocket!";
+                document.getElementById("connection-status").style.color = "red";
+            };
+    
+            chatSocket.onclose = function () {
+                document.getElementById("connection-status").innerText = "WebSocket disconnected!";
+                document.getElementById("connection-status").style.color = "orange";
+            };
+    
+            chatSocket.onmessage = function (event) {
+                let data = JSON.parse(event.data);
+                
+                // Avoid displaying the message twice for the sender
+                if (data.message) {
+                    displayMessage(data.message, data.username, data.username === window.userName);
+                }
+            };
+
+        }
+    
+        function sendMessage() {
+            let messageBox = document.getElementById("message-box");
+            let message = messageBox.value.trim();
+
+            if (message !== "") {
+                let data = {
+                    type: "text",
+                    message: message,
+                    username: window.userName // Send username with message
+                };
+                
+                if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                    chatSocket.send(JSON.stringify(data));
+                }
+
+                // ✅ FIX: Only display message if WebSocket is NOT open
+                setTimeout(() => {
+                    if (chatSocket.readyState !== WebSocket.OPEN) {
+                        displayMessage(message, true); // Display as sent message (green)
+                    }
+                }, 100); // Small delay to ensure WebSocket processes it first
+                messageBox.value = ""; // Clear input box
+            }
+        }
+
+    
+        function displayMessage(message, username, sender = false) {
+            let messageList = document.getElementById("messageList");
+            let messageDiv = document.createElement("div");
+            messageDiv.classList.add("message");
+
+            // Determine if the message is sent or received
+            if (sender) {
+                messageDiv.classList.add("sent"); // Right side (green background)
+            } else {
+                messageDiv.classList.add("received"); // Left side (white background)
+            }
+
+            // Show username in messages
+            messageDiv.innerHTML = `<strong>${username}:</strong> ${message}`;
+            messageList.appendChild(messageDiv);
+
+            // Scroll to the latest message
+            messageList.scrollTop = messageList.scrollHeight;
+        }
+        function displayFile(fileData, fileType, fileName, type) {
+            let messageList = document.getElementById("messageList");
+            let fileElement = document.createElement("div");
+            fileElement.classList.add("message", type);
+    
+            if (fileType === "image") {
+                fileElement.innerHTML = `<img src="${fileData}" alt="${fileName}" style="max-width: 100%; border-radius: 10px;">`;
+            } else if (fileType === "audio") {
+                fileElement.innerHTML = `<audio controls><source src="${fileData}" type="audio/mpeg">Your browser does not support audio.</audio>`;
+            } else if (fileType === "video") {
+                fileElement.innerHTML = `<video controls style="max-width: 100%; border-radius: 10px;"><source src="${fileData}" type="video/mp4">Your browser does not support video.</video>`;
+            } else {
+                fileElement.innerHTML = `<a href="${fileData}" download="${fileName}" class="btn btn-link">Download ${fileName}</a>`;
+            }
+    
+            messageList.appendChild(fileElement);
+            messageList.scrollTop = messageList.scrollHeight;
+        }
+        function logout() {
+            console.log("Logging out...");  // Debugging
+
+            // Redirect to home page after logout
+            window.location.href = "/";
+        }
+
+    </script>
+</body>
+</html>
