@@ -11,14 +11,11 @@ load_dotenv(os.path.join(BASE_DIR, ".env"))
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
 # Debug Mode (Set to False in Production)
-DEBUG = os.getenv("DEBUG", "True") == "True"
+DEBUG = os.getenv("DEBUG", "False") == "True"
 
 # Allowed Hosts
-ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    os.getenv('RAILWAY_URL'),  # Get Railway URL from environment variables
-]
+ALLOWED_HOSTS = os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
+
 
 # Installed Apps
 INSTALLED_APPS = [
