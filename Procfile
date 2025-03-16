@@ -1,1 +1,1 @@
-web: gunicorn chat_project.asgi:application --worker-class channels.worker.Worker
+web: gunicorn chat_project.wsgi --log-file -
