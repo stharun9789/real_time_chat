@@ -14,7 +14,11 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 DEBUG = os.getenv("DEBUG", "True") == "True"
 
 # Allowed Hosts
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+ALLOWED_HOSTS = [
+    'localhost',
+    '127.0.0.1',
+    os.getenv('RAILWAY_URL'),  # Get Railway URL from environment variables
+]
 
 # Installed Apps
 INSTALLED_APPS = [
