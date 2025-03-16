@@ -175,7 +175,8 @@
 
             window.userName = userNameInput;  // Store username globally
     
-            chatSocket = new WebSocket("ws://" + window.location.host + "/ws/chat/" + roomName + "/");
+            let protocol = window.location.protocol === "https:" ? "wss://" : "ws://";
+            chatSocket = new WebSocket(protocol + window.location.host + "/ws/chat/" + roomName + "/");
     
             chatSocket.onopen = function () {
                 document.getElementById("connection-status").innerText = "Connected to WebSocket!";
